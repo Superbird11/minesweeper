@@ -1,19 +1,20 @@
 package def;
-import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 
 import javax.swing.Timer;
-import javax.swing.JLabel;
-import javax.swing.SwingUtilities;
+
+import javafx.scene.control.Label;
+import javafx.event.EventHandler;
+import javafx.event.EventType;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 
 /**
  * A class representing a single tile on a Minesweeper board.
  * @author Louis Jacobowitz
  */
-public class MineSquare extends JLabel implements MouseListener, ActionListener {
+public class MineSquare implements ActionListener{
 	/** A serial version ID */
 	private static final long serialVersionUID = 1L;
 	/** This tile's X coordinate */
@@ -24,6 +25,8 @@ public class MineSquare extends JLabel implements MouseListener, ActionListener 
 	private MinesweeperBoard board;
 	/** This tile's mechanism for retrieving images */
 	private LocalImage icon;
+	/** This tile's label */
+	private Label label;
 	/** Whether or not this tile has been revealed */
 	private boolean revealed;
 	/** Whether or not this tile is a mine */
@@ -47,12 +50,12 @@ public class MineSquare extends JLabel implements MouseListener, ActionListener 
 	 */
 	public MineSquare(int x, int y, MinesweeperBoard theBoard) {
 		super();
-		this.setSize(16, 16);
+		/*this.setSize(16, 16);
 		this.setMaximumSize(new Dimension(16, 16));
 		this.setMinimumSize(new Dimension(16, 16));
-		this.setPreferredSize(new Dimension(16, 16));
+		this.setPreferredSize(new Dimension(16, 16));*/
 		icon = LocalImage.initialize();
-		this.setIcon(icon.unknown());
+		// create essential components
 		xcoord = x;
 		ycoord = y;
 		board = theBoard;
@@ -62,7 +65,28 @@ public class MineSquare extends JLabel implements MouseListener, ActionListener 
 		interactable = true;
 		clickedOnce = false;
 		timer = new Timer(300, this);
-		this.addMouseListener(this);
+		// create label
+		label = new Label(null, icon.unknown());
+		label.setMinSize(16, 16);
+		label.setMaxSize(16, 16);
+		label.setPrefSize(16, 16);
+		ClickHandler click = new ClickHandler();
+		ReleaseHandler release = new ReleaseHandler();
+		PressedHandler press = new PressedHandler();
+		// set mouse events
+		label.setOnMouseClicked(click);
+		label.setOnMouseExited(release);
+		label.setOnMousePressed(press);
+		label.setOnMouseDragExited(release);
+		//this.addMouseListener(this);
+	}
+	
+	/**
+	 * Returns this object's label.
+	 * @return the label
+	 */
+	public Label getLabel() {
+		return label;
 	}
 	
 	/**
@@ -110,7 +134,7 @@ public class MineSquare extends JLabel implements MouseListener, ActionListener 
 	public void flag() {
 		if(!revealed && !flagged) {
 			flagged = true;
-			this.setIcon(icon.flag());
+			label.setGraphic(icon.flag());
 			board.incrementMineCount();
 		}
 	}
@@ -121,7 +145,7 @@ public class MineSquare extends JLabel implements MouseListener, ActionListener 
 	public void unflag() {
 		if(!revealed && !flagged) {
 			flagged = false;
-			this.setIcon(icon.unknown());
+			label.setGraphic(icon.unknown());
 			board.decrementMineCount();
 		}
 	}
@@ -149,11 +173,11 @@ public class MineSquare extends JLabel implements MouseListener, ActionListener 
 	public void setRevealed() {
 		revealed = true;
 		if(isMine) {
-			this.setIcon(icon.activeMine());
+			label.setGraphic(icon.activeMine());
 			//board.failGame(this);
 		}
 		else {
-			this.setIcon(icon.known(number));
+			label.setGraphic(icon.known(number));
 			if(number == 0) {
 				board.clearAllAround(this);
 			}
@@ -177,76 +201,76 @@ public class MineSquare extends JLabel implements MouseListener, ActionListener 
 	}
 	
 	/**
-	 * Registers when this square is clicked, and alerts the board of this fact.
-	 * @param e - some mouse event
+	 * A class for handling click events
+	 * @author Louis Jacobowitz
 	 */
-	@Override
-	public void mouseClicked(MouseEvent e) {
-		System.out.printf("x:%d, y:%d, n:%d\n", xcoord, ycoord, number);
-		if(interactable) {
-			if (!revealed && SwingUtilities.isRightMouseButton(e)) {
-				if(flagged) unflag();
-				else flag();
-			}
-			else if(SwingUtilities.isLeftMouseButton(e)) {
-				if(!revealed) {
-					board.squareClicked(this);
+	private class ClickHandler implements EventHandler<MouseEvent> {
+		/**
+		 * Registers when this square is clicked, and alerts the board of this fact.
+		 * @param e - some mouse event
+		 */
+		@Override
+		public void handle(MouseEvent e) {
+			System.out.printf("x:%d, y:%d, n:%d\n", xcoord, ycoord, number);
+			if(interactable) {
+				if (!revealed && e.getButton() == MouseButton.SECONDARY) {
+					if(flagged) unflag();
+					else flag();
 				}
-				else if(!clickedOnce) {
-					clickedOnce = true;
-					timer.start();
+				else if(e.getButton() == MouseButton.PRIMARY) {
+					if(!revealed) {
+						board.squareClicked(MineSquare.this);
+					}
+					else if(!clickedOnce) {
+						clickedOnce = true;
+						timer.start();
+					}
+					else {
+						// double clicked.
+						board.clearAllAround(MineSquare.this);
+					}
 				}
-				else {
-					// double clicked.
-					board.clearAllAround(this);
+				else if(revealed && e.getButton() == MouseButton.MIDDLE) {
+					board.clearAllAround(MineSquare.this);
 				}
-			}
-			else if(revealed && SwingUtilities.isMiddleMouseButton(e)) {
-				board.clearAllAround(this);
 			}
 		}
 	}
 
 	/**
-	 * Registers when the mouse pressed down on this square, and changes its image temporarily
-	 *  (to be changed back upon the mouseExited event)
-	 * @param e - some mouse event
+	 * A class for handling mouse pressed events
+	 * @author Louis Jacobowitz
 	 */
-	@Override
-	public void mousePressed(MouseEvent e) {
-		if(!revealed && !flagged && interactable) {
-			this.setIcon(icon.known(0));
+	private class PressedHandler implements EventHandler<MouseEvent> {
+		/**
+		 * Registers when the mouse pressed down on this square, and changes its image temporarily
+		 *  (to be changed back upon the mouseExited event)
+		 * @param e - some mouse event
+		 */
+		@Override
+		public void handle(MouseEvent e) {
+			if(!revealed && !flagged && interactable) {
+				label.setGraphic(icon.known(0));
+			}
 		}
 	}
 
 	/**
-	 * Registers when the mouse released on this square but did not press down in it; thus, not a click.
-	 *  Changes the image back to what it should be if it would otherwise be changed.
-	 * @param e - some mouse event
+	 * A class for handling release events
+	 * @author Louis Jacobowitz
 	 */
-	@Override
-	public void mouseReleased(MouseEvent e) {
-		if(!revealed && !flagged) {
-			this.setIcon(icon.unknown());
+	private class ReleaseHandler implements EventHandler<MouseEvent> {
+		/**
+		 * Registers when the mouse released on this square but did not press down in it; thus, not a click.
+		 *  Changes the image back to what it should be if it would otherwise be changed.
+		 * @param e - some mouse event
+		 */
+		@Override
+		public void handle(MouseEvent e) {
+			if(!revealed && !flagged) {
+				label.setGraphic(icon.unknown());
+			}
 		}
-	}
-
-	/**
-	 * Does nothing.
-	 * @param e - some mouse event
-	 */
-	@Override
-	public void mouseEntered(MouseEvent e) {
-		// pass	
-	}
-
-	/**
-	 * Changes this tile to what it should be, by calling mouseReleased which already does that.
-	 * @param e - some mouse event
-	 */
-	@Override
-	public void mouseExited(MouseEvent e) {
-		mouseReleased(e);
 	}
 
 	/**

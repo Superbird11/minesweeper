@@ -1,30 +1,27 @@
 package def;
 
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.io.File;
-import java.io.IOException;
-
-import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
-import javax.swing.JLabel;
+import javafx.event.EventHandler;
+import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseEvent;
 
 /**
  * A class representing the face label.
  * @author Louis Jacobowitz
  *
  */
-public class FaceLabel extends JLabel implements MouseListener {
+public class FaceLabel extends Label {
 	/** A default Serial Version ID */
 	private static final long serialVersionUID = 1L;
 	/** An icon for a happy face */
-	public static ImageIcon happyFace;
+	public static ImageView happyFace;
 	/** An icon for a pressed-down happy face */
-	public static ImageIcon pressedFace;
+	public static ImageView pressedFace;
 	/** An icon for a surprised face */
-	public static ImageIcon surprisedFace;
+	public static ImageView surprisedFace;
 	/** An icon for a dead face */
-	public static ImageIcon deadFace;
+	public static ImageView deadFace;
 	/** The board holding this label */
 	private MinesweeperBoard board;
 	
@@ -35,51 +32,46 @@ public class FaceLabel extends JLabel implements MouseListener {
 	public FaceLabel(MinesweeperBoard b) {
 		super();
 		board = b;
-		try {
-			happyFace = new ImageIcon(ImageIO.read(new File("src/assets/smileyFace.png")));
-			pressedFace = new ImageIcon(ImageIO.read(new File("src/assets/pressedFace.png")));
-			surprisedFace = new ImageIcon(ImageIO.read(new File("src/assets/surprisedFace.png")));
-			deadFace = new ImageIcon(ImageIO.read(new File("src/assets/deadFace.png")));
-		} catch (IOException e) {
-			// Auto-generated catch block
-			e.printStackTrace();
+		happyFace = new ImageView(new Image("assets/smileyFace.png", 32, 32, true, false));
+		pressedFace = new ImageView(new Image("assets/pressedFace.png", 32, 32, true, false));
+		surprisedFace = new ImageView(new Image("assets/surprisedFace.png", 32, 32, true, false));
+		deadFace = new ImageView(new Image("assets/deadFace.png", 32, 32, true, false));
+		ClickHandler click = new ClickHandler();
+		PressedHandler press = new PressedHandler();
+		ReleasedHandler release = new ReleasedHandler();
+		this.setOnMouseClicked(click);
+		this.setOnMousePressed(press);
+		this.setOnMouseReleased(release);
+		this.setOnMouseDragExited(release);
+	}
+
+	private class ClickHandler implements EventHandler<MouseEvent> {
+		/**
+		 * Activates when clicked. Starts a new game.
+		 */
+		@Override
+		public void handle(MouseEvent e) {
+			board.newGame();
 		}
 	}
 
-	/**
-	 * Activates when clicked. Starts a new game.
-	 */
-	@Override
-	public void mouseClicked(MouseEvent e) {
-		board.newGame();
+	private class PressedHandler implements EventHandler<MouseEvent> {
+		/**
+		 * Activates when the button is pressed. Changes this label's image.
+		 */
+		@Override
+		public void handle(MouseEvent e) {
+			FaceLabel.this.setGraphic(pressedFace);
+		}
 	}
 
-	/**
-	 * Activates when the button is pressed. Changes this label's image.
-	 */
-	@Override
-	public void mousePressed(MouseEvent e) {
-		this.setIcon(pressedFace);
+	private class ReleasedHandler implements EventHandler<MouseEvent> {
+		/**
+		 * Activates when the mouse is released. Changes this label's image.
+		 */
+		@Override
+		public void handle(MouseEvent e) {
+			FaceLabel.this.setGraphic(happyFace);
+		}
 	}
-
-	/**
-	 * Activates when the mouse is released. Changes this label's image.
-	 */
-	@Override
-	public void mouseReleased(MouseEvent e) {
-		this.setIcon(happyFace);
-	}
-
-	/** Activates when the mouse passes out of this label. Changes its image. */
-	@Override
-	public void mouseExited(MouseEvent e) {
-		this.setIcon(happyFace);
-	}
-
-	/** doesn't do a damn thing. */
-	@Override
-	public void mouseEntered(MouseEvent e) {
-		// pass
-	}
-	
 }

@@ -1,11 +1,15 @@
 package def;
-import java.awt.BorderLayout;
-import java.awt.Container;
-import java.awt.GridLayout;
+
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.control.Label;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
 import javax.swing.*;
 
@@ -16,7 +20,7 @@ import java.util.Random;
  * @author Louis Jacobowitz
  *
  */
-public class MinesweeperBoard extends JFrame implements ActionListener {
+public class MinesweeperBoard extends Application implements ActionListener {
 	/** A default Serial Version ID */
 	private static final long serialVersionUID = 1L;
 	/** The app name */
@@ -33,16 +37,20 @@ public class MinesweeperBoard extends JFrame implements ActionListener {
 	private int currentNumMines;
 	/** An instance of LocalImage for assigning icons when necessary */
 	private LocalImage icon;
+	/** The biggest panel, the top panel */
+	private VBox root;
+	/** The top panel */
+	private BorderPane topPanel;
 	/** The bottom panel, in which the mines are placed */
-	private JPanel bottomPanel;
+	private GridPane bottomPanel;
 	/** The time in the game so far */
 	private int time;
 	/** A timer for counting up the time */
 	private Timer timeTimer;
 	/** The label that displays the time */
-	private JLabel timeLabel;
+	private Label timeLabel;
 	/** The label that the mine counter uses */
-	private JLabel mineLabel;
+	private Label mineLabel;
 	/** The face label */
 	private FaceLabel faceLabel;
 	
@@ -50,59 +58,15 @@ public class MinesweeperBoard extends JFrame implements ActionListener {
 	 * Creates a new MinesweeperBoard, initializing the display and calling newGame().
 	 */
 	public MinesweeperBoard() {
-		// First, make it able to close
-		addWindowListener(new WindowAdapter () {
-			public void windowClosing(WindowEvent e) {
-                System.exit(0);
-            }
-		});
-		// Set up container
-		Container c = getContentPane();
-		setTitle(APP_NAME);
-		//setSize(750, 500); //maybe not necessary?
-		c.setLayout(new GridLayout(2, 1));
-		// Set default boardHeight and boardWidth
-		boardHeight = 10;//16;
-		boardWidth = 19;//30;
-		numMines = 10;//99;
-		bottomPanel = new JPanel();
 		
-		// Initialize icon now
-		icon = LocalImage.initialize();
 		
-		// Top has a timer. For now, just put in a JPanel
-		JPanel topPanel = new JPanel(new BorderLayout());
-		c.add(topPanel);
-		// Put things in the top panel! Start with initializing the timer.
-		timeLabel = new JLabel("Time: 000");
-		timeTimer = new Timer(1000, this);
-		timeTimer.start();
-		topPanel.add(timeLabel, BorderLayout.EAST);
-		// Next, initialize the mine label
-		currentNumMines = numMines;
-		mineLabel = new JLabel(String.format("Mines: %3d", currentNumMines));
-		topPanel.add(mineLabel, BorderLayout.WEST);
-		// Finally, add the face label
-		faceLabel = new FaceLabel(this);
-		topPanel.add(faceLabel, BorderLayout.CENTER);
-		
-		c.add(bottomPanel);
-		newGame();
-		
-		setSize(600, 600);
-		setVisible(true);
-		System.out.println("Finished constructor");
 	}
 	
 	/**
 	 * Starts a new game, initializing the board and the mines.
 	 */
 	public void newGame() {
-		Container c = getContentPane();
-		c.remove(bottomPanel);
-		bottomPanel = new JPanel(new GridLayout(boardHeight, boardWidth, 1, 1));
-		c.add(bottomPanel);
-		
+		bottomPanel.getChildren().clear();
 		// Set up board
 		board = new MineSquare[boardHeight][boardWidth];
 		for(int i = 0; i < boardHeight; i++) {
@@ -123,7 +87,7 @@ public class MinesweeperBoard extends JFrame implements ActionListener {
 		// Also set the number of adjacent mines.
 		for(int i = 0; i < boardHeight; i++) {
 			for(int j = 0; j < boardWidth; j++) {
-				bottomPanel.add(board[i][j]);
+				bottomPanel.getChildren().add(board[i][j].getLabel());
 				//board[i][j].setSize(16,16);
 				int mineCount = 0;
 				if(i - 1 >= 0 && j - 1 >= 0 && board[i - 1][j - 1].isMine()) mineCount++;
@@ -172,7 +136,7 @@ public class MinesweeperBoard extends JFrame implements ActionListener {
 			for(int j = 0; j < boardWidth; j++) {
 				board[i][j].setInteractable(false);
 				if(board[i][j].isMine() && board[i][j] != sender) {
-					board[i][j].setIcon(icon.mine());
+					board[i][j].getLabel().setGraphic(icon.mine());
 				}
 			}
 		}
@@ -219,7 +183,44 @@ public class MinesweeperBoard extends JFrame implements ActionListener {
 
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		MinesweeperBoard app = new MinesweeperBoard();
+		launch(args);
+		//MinesweeperBoard app = new MinesweeperBoard();
 		System.out.println("Constructed");
+	}
+
+	@Override
+	public void start(Stage primaryStage) throws Exception {
+		// First set title
+		primaryStage.setTitle(APP_NAME);
+		// Set up main container
+		root = new VBox();
+		topPanel = new BorderPane();
+		bottomPanel = new GridPane();
+		root.getChildren().addAll(topPanel, bottomPanel);
+		// Set default boardHeight and boardWidth
+		boardHeight = 10;//16;
+		boardWidth = 19;//30;
+		numMines = 10;//99;
+		
+		// Initialize icon
+		icon = LocalImage.initialize();
+		
+		// Put things in the top panel! Start with initializing the timer.
+		timeLabel = new Label("Time: 000");
+		timeTimer = new Timer(1000, this);
+		timeTimer.start();
+		topPanel.setRight(timeLabel);
+		// Next, initialize the mine label
+		currentNumMines = numMines;
+		mineLabel = new Label(String.format("Mines: %3d", currentNumMines));
+		topPanel.setLeft(mineLabel);
+		// Finally, add the face label
+		faceLabel = new FaceLabel(this);
+		topPanel.setCenter(faceLabel);
+		
+		newGame();
+		primaryStage.setScene(new Scene(root, 500, 500));
+		System.out.println("Finished constructor");
+		
 	}
 }
